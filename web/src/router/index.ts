@@ -5,11 +5,6 @@ const isMobile = () => window.innerWidth < 768
 const router = createRouter({
   history: createWebHistory(),
   routes: [
-    {
-      path: '/login',
-      component: () => import('../views/Login.vue'),
-      meta: { title: '登录', public: true },
-    },
     // PC routes
     {
       path: '/',
@@ -76,10 +71,6 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  const token = localStorage.getItem('token')
-  if (!to.meta.public && !token) {
-    return '/login'
-  }
   if (to.path === '/' && isMobile()) {
     return '/m'
   }
