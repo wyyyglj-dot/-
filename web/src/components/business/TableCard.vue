@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { NButton, NModal, NTag, NTooltip } from 'naive-ui'
+import { NButton, NTag, NTooltip } from 'naive-ui'
 import type { TableSummary } from '../../types'
 import { SPICE_LABELS, SPICE_COLORS } from '../../types'
 import { centsToYuan } from '../../utils/currency'
+import OrderDetailModal from './OrderDetailModal.vue'
 
 defineProps<{ table: TableSummary; manageMode?: boolean }>()
-defineEmits<{ click: [], checkout: [sessionId: number], rename: [id: number], delete: [id: number], cancel: [sessionId: number] }>()
+const emit = defineEmits<{ click: [], checkout: [sessionId: number], rename: [id: number], delete: [id: number], cancel: [sessionId: number], refresh: [] }>()
 
 const showDetails = ref(false)
 
@@ -104,7 +105,7 @@ function statusLabel(status: string): string {
     </div>
 
     <div
-      v-if="table.status !== 'idle' && (table.dishes?.length ?? 0) > 3"
+      v-if="table.status !== 'idle' && (table.dishes?.length ?? 0) > 0"
       class="mt-2 -mx-5 -mb-5 h-11 flex items-center justify-center gap-1.5
              card-footer-gradient rounded-b-[var(--radius-lg)]
              cursor-pointer transition-all duration-200
@@ -122,46 +123,13 @@ function statusLabel(status: string): string {
       <span class="text-sm text-[var(--primary)] opacity-50">›</span>
     </div>
 
-    <n-modal
+    <OrderDetailModal
+      v-if="table.session_id"
       v-model:show="showDetails"
-      preset="card"
-      :title="`${formatTableName(table.table_no)} - 菜品详情`"
-      class="max-w-md w-[92vw] rounded-2xl"
-      :segmented="{ content: true, footer: true }"
-    >
-      <div class="max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
-        <div
-          v-for="(dish, index) in table.dishes"
-          :key="`detail-${dish.name}-${index}`"
-          class="flex items-center justify-between py-3 border-b border-[var(--action-border)] last:border-0"
-          :class="dish.status === 'served' ? 'opacity-50' : ''"
-        >
-          <div class="flex-1 min-w-0 pr-4">
-            <div class="font-medium truncate text-base" :class="dish.status === 'served' ? 'line-through' : ''">
-              {{ dish.name }}
-              <NTag v-if="dish.spice_level" :color="{ color: '#fff0', textColor: SPICE_COLORS[dish.spice_level as keyof typeof SPICE_COLORS], borderColor: SPICE_COLORS[dish.spice_level as keyof typeof SPICE_COLORS] }" size="small" class="ml-1 scale-75 origin-left">{{ SPICE_LABELS[dish.spice_level as keyof typeof SPICE_LABELS] }}</NTag>
-            </div>
-            <div class="text-xs text-[var(--text-secondary)]">{{ centsToYuan(dish.unit_price_cents) }} / 份</div>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="font-mono font-bold">×{{ dish.qty_ordered }}</span>
-            <n-tag v-if="dish.status === 'unserved'" size="small" :bordered="false">未上</n-tag>
-            <n-tag v-else-if="dish.status === 'partial'" size="small" type="warning" :bordered="false">
-              {{ dish.qty_unserved }}/{{ dish.qty_ordered }}未上
-            </n-tag>
-            <n-tag v-else size="small" type="success" :bordered="false">已上</n-tag>
-          </div>
-        </div>
-      </div>
-      <template #footer>
-        <div class="flex justify-between items-center w-full px-1">
-          <span class="text-[var(--text-secondary)] text-sm">共 {{ table.dishes.length }} 项菜品</span>
-          <div class="text-right">
-            <span class="text-xs text-[var(--text-secondary)]">总计：</span>
-            <span class="text-xl font-bold text-[var(--primary)]">{{ centsToYuan(table.total_cents) }}</span>
-          </div>
-        </div>
-      </template>
-    </n-modal>
+      :session-id="table.session_id"
+      :table-no="table.table_no"
+      @session-deleted="showDetails = false; emit('refresh')"
+      @item-updated="emit('refresh')"
+    />
   </div>
 </template>

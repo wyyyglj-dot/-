@@ -78,3 +78,19 @@ export function cancelSession(sessionId: number): void {
     status: 'idle',
   })
 }
+
+export function forceDeleteSession(sessionId: number): void {
+  const session = repo.getSessionById(sessionId)
+  if (!session) throw new NotFoundError('Session')
+
+  repo.forceDeleteSession(sessionId)
+
+  sseHub.broadcast('session.deleted', {
+    session_id: sessionId,
+    table_id: session.table_id,
+  })
+  sseHub.broadcast('table.updated', {
+    table_id: session.table_id,
+    status: 'idle',
+  })
+}

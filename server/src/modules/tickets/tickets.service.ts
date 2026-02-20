@@ -6,7 +6,9 @@ import {
   requireString,
 } from '../../shared/validation'
 import { OrderTicket, OrderTicketItem } from '../../shared/types'
+import { getDb } from '../../db/client'
 import { sseHub } from '../sse/sse.hub'
+import * as sessionsRepo from '../sessions/sessions.repo'
 import * as repo from './tickets.repo'
 
 export interface TicketWithItems extends OrderTicket {
@@ -40,8 +42,8 @@ function parseSpiceLevel(value: unknown, field: string): string | null {
 export function createTicket(sessionId: number, input: unknown): TicketWithItems {
   const session = repo.getSessionContext(sessionId)
   if (!session) throw new NotFoundError('Session')
-  if (session.status !== 'DINING') {
-    throw new ConflictError('Tickets can only be created for DINING sessions', 'SESSION_NOT_DINING')
+  if (session.status === 'CLOSED') {
+    throw new ConflictError('Cannot modify a CLOSED session', 'SESSION_CLOSED')
   }
 
   const body = asObject(input)
@@ -103,7 +105,15 @@ export function createTicket(sessionId: number, input: unknown): TicketWithItems
   }
 
   const note = optionalString(body.note) ?? null
-  const created = repo.createTicketWithItems(sessionId, note, normalizedItems)
+
+  // Atomic: revert PENDING_CHECKOUT + create ticket in one transaction
+  const needsRevert = session.status === 'PENDING_CHECKOUT'
+  const db = getDb()
+  const atomicCreate = db.transaction(() => {
+    if (needsRevert) sessionsRepo.revertToDining(sessionId)
+    return repo.createTicketWithItems(sessionId, note, normalizedItems)
+  })
+  const created = atomicCreate()
 
   sseHub.broadcast('ticket.created', {
     ticket_id: created.ticket.id,
@@ -114,6 +124,7 @@ export function createTicket(sessionId: number, input: unknown): TicketWithItems
   sseHub.broadcast('table.updated', {
     table_id: session.table_id,
     session_id: session.id,
+    ...(needsRevert ? { status: 'dining' } : {}),
   })
 
   return {
@@ -124,6 +135,11 @@ export function createTicket(sessionId: number, input: unknown): TicketWithItems
 
 export function patchTicketItem(itemId: number, input: unknown): OrderTicketItem {
   const body = asObject(input)
+
+  // Dual-compat: accept both qty/void_qty (legacy) and qty_ordered/qty_voided (new)
+  if (body.qty === undefined && body.qty_ordered !== undefined) body.qty = body.qty_ordered
+  if (body.void_qty === undefined && body.qty_voided !== undefined) body.void_qty = body.qty_voided
+
   const hasQty = body.qty !== undefined
   const hasVoidQty = body.void_qty !== undefined
 
@@ -133,34 +149,42 @@ export function patchTicketItem(itemId: number, input: unknown): OrderTicketItem
 
   const current = repo.getTicketItemContext(itemId)
   if (!current) throw new NotFoundError('Ticket item')
-  if (current.session_status !== 'DINING') {
-    throw new ConflictError('Only DINING sessions allow ticket item modification', 'SESSION_NOT_DINING')
+  if (current.session_status === 'CLOSED') {
+    throw new ConflictError('Cannot modify a CLOSED session', 'SESSION_CLOSED')
   }
 
-  if (hasQty) {
-    const qty = requirePositiveInt(body.qty, 'qty')
-    const minQty = current.qty_served + current.qty_voided
-    if (qty < minQty) {
-      throw new ConflictError('qty cannot be less than served + voided quantity', 'INVALID_QTY')
+  // Atomic: revert PENDING_CHECKOUT + mutation in one transaction
+  const needsRevert = current.session_status === 'PENDING_CHECKOUT'
+  const db = getDb()
+  const atomicPatch = db.transaction(() => {
+    if (needsRevert) sessionsRepo.revertToDining(current.session_id)
+
+    if (hasQty) {
+      const qty = requirePositiveInt(body.qty, 'qty')
+      const minQty = current.qty_served + current.qty_voided
+      if (qty < minQty) {
+        throw new ConflictError('qty cannot be less than served + voided quantity', 'INVALID_QTY')
+      }
+      const applied = repo.updateTicketItemQtyOrdered(itemId, qty)
+      if (!applied) {
+        throw new ConflictError('Concurrent modification detected, please retry', 'CONCURRENT_MODIFICATION')
+      }
+    } else {
+      const voidQty = requirePositiveInt(body.void_qty, 'void_qty')
+      const pending = current.qty_ordered - current.qty_served - current.qty_voided
+      if (pending <= 0) {
+        throw new ConflictError('No pending quantity left to void', 'NO_PENDING_QTY')
+      }
+      if (voidQty > pending) {
+        throw new ConflictError('void_qty exceeds pending quantity', 'VOID_EXCEEDS_PENDING')
+      }
+      const applied = repo.incrementTicketItemVoided(itemId, voidQty)
+      if (!applied) {
+        throw new ConflictError('Concurrent modification detected, please retry', 'CONCURRENT_MODIFICATION')
+      }
     }
-    const applied = repo.updateTicketItemQtyOrdered(itemId, qty)
-    if (!applied) {
-      throw new ConflictError('Concurrent modification detected, please retry', 'CONCURRENT_MODIFICATION')
-    }
-  } else {
-    const voidQty = requirePositiveInt(body.void_qty, 'void_qty')
-    const pending = current.qty_ordered - current.qty_served - current.qty_voided
-    if (pending <= 0) {
-      throw new ConflictError('No pending quantity left to void', 'NO_PENDING_QTY')
-    }
-    if (voidQty > pending) {
-      throw new ConflictError('void_qty exceeds pending quantity', 'VOID_EXCEEDS_PENDING')
-    }
-    const applied = repo.incrementTicketItemVoided(itemId, voidQty)
-    if (!applied) {
-      throw new ConflictError('Concurrent modification detected, please retry', 'CONCURRENT_MODIFICATION')
-    }
-  }
+  })
+  atomicPatch()
 
   const updated = repo.getTicketItemById(itemId)
   if (!updated) throw new NotFoundError('Ticket item')
@@ -175,6 +199,7 @@ export function patchTicketItem(itemId: number, input: unknown): OrderTicketItem
   sseHub.broadcast('table.updated', {
     table_id: current.table_id,
     session_id: current.session_id,
+    ...(needsRevert ? { status: 'dining' } : {}),
   })
 
   return updated

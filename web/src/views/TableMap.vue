@@ -34,6 +34,7 @@ onMounted(async () => {
   sseClient.on('table.updated', () => tableStore.fetchTables())
   sseClient.on('checkout.completed', () => tableStore.fetchTables())
   sseClient.on('session.opened', () => tableStore.fetchTables())
+  sseClient.on('session.deleted', () => tableStore.fetchTables())
 })
 
 function handleTableClick(table: any) {
@@ -171,6 +172,7 @@ async function handleCancel(sessionId: number) {
                 @rename="handleRename"
                 @delete="handleDelete"
                 @cancel="handleCancel"
+                @refresh="tableStore.fetchTables()"
               />
             </n-grid-item>
           </n-grid>

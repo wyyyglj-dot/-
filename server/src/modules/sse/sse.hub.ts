@@ -2,6 +2,7 @@ import { Response } from 'express'
 
 export type SseEventName =
   | 'session.opened'
+  | 'session.deleted'
   | 'ticket.created'
   | 'serving.updated'
   | 'checkout.completed'

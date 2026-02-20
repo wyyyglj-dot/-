@@ -1,5 +1,12 @@
 import { getDb } from '../../db/client'
+import { NotFoundError } from '../../shared/errors'
 import { DiningTable, OrderTicket, OrderTicketItem, TableSession } from '../../shared/types'
+
+export interface ForceDeleteResult {
+  deleted_items: number
+  deleted_tickets: number
+  deleted_payments: number
+}
 
 export function getTableById(tableId: number): DiningTable | null {
   const db = getDb()
@@ -101,6 +108,16 @@ export function getSessionTotal(sessionId: number): number {
   return row?.total_cents ?? 0
 }
 
+export function revertToDining(sessionId: number): boolean {
+  const db = getDb()
+  const result = db.prepare(`
+    UPDATE table_session
+    SET status = 'DINING'
+    WHERE id = ? AND status = 'PENDING_CHECKOUT'
+  `).run(sessionId)
+  return result.changes > 0
+}
+
 export function deleteSession(sessionId: number): boolean {
   const db = getDb()
   const result = db.prepare(`
@@ -108,4 +125,43 @@ export function deleteSession(sessionId: number): boolean {
     WHERE id = ?
   `).run(sessionId)
   return result.changes > 0
+}
+
+export function forceDeleteSession(sessionId: number): ForceDeleteResult {
+  const db = getDb()
+
+  const selectStmt = db.prepare(
+    'SELECT id, table_id, status FROM table_session WHERE id = ?'
+  )
+  const deletePaymentStmt = db.prepare(
+    'DELETE FROM payment WHERE session_id = ?'
+  )
+  const deleteItemsStmt = db.prepare(`
+    DELETE FROM order_ticket_item
+    WHERE ticket_id IN (SELECT id FROM order_ticket WHERE session_id = ?)
+  `)
+  const deleteTicketsStmt = db.prepare(
+    'DELETE FROM order_ticket WHERE session_id = ?'
+  )
+  const deleteSessionStmt = db.prepare(
+    'DELETE FROM table_session WHERE id = ?'
+  )
+
+  const tx = db.transaction((sid: number): ForceDeleteResult => {
+    const session = selectStmt.get(sid) as { id: number } | undefined
+    if (!session) throw new NotFoundError('Session')
+
+    const paymentRes = deletePaymentStmt.run(sid)
+    const itemsRes = deleteItemsStmt.run(sid)
+    const ticketsRes = deleteTicketsStmt.run(sid)
+    deleteSessionStmt.run(sid)
+
+    return {
+      deleted_payments: paymentRes.changes,
+      deleted_items: itemsRes.changes,
+      deleted_tickets: ticketsRes.changes,
+    }
+  })
+
+  return tx(sessionId)
 }

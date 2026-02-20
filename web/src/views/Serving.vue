@@ -15,6 +15,7 @@ onMounted(() => {
   unsubs.push(
     sseClient.on('serving.updated', () => orderStore.fetchServingQueue()),
     sseClient.on('ticket.created', () => orderStore.fetchServingQueue()),
+    sseClient.on('session.deleted', () => orderStore.fetchServingQueue()),
   )
 })
 

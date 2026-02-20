@@ -7,6 +7,7 @@ import { checkoutSession } from '../api/checkout'
 import { centsToYuan } from '../utils/currency'
 import { v4 as uuidv4 } from 'uuid'
 import type { SessionDetail, PaymentMethod } from '../types'
+import OrderDetailModal from '../components/business/OrderDetailModal.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -14,10 +15,15 @@ const message = useMessage()
 const session = ref<SessionDetail | null>(null)
 const paymentMethod = ref<PaymentMethod>('WECHAT')
 const loading = ref(false)
+const showDetail = ref(false)
 
-onMounted(async () => {
-  session.value = await getSession(Number(route.params.sessionId))
-})
+const sessionId = Number(route.params.sessionId)
+
+async function loadSession() {
+  session.value = await getSession(sessionId)
+}
+
+onMounted(loadSession)
 
 const paymentStyles: Record<string, string> = {
   WECHAT: 'border-green-500/50 bg-green-500/10',
@@ -36,10 +42,24 @@ async function handleCheckout() {
     message.success('结账成功')
     router.push('/')
   } catch (e: any) {
-    message.error(e.message)
+    const msg = e.message || ''
+    if (msg.includes('PENDING_CHECKOUT') || msg.includes('已被修改')) {
+      message.warning('订单已被修改，请重新确认')
+      await loadSession()
+    } else {
+      message.error(msg)
+    }
   } finally {
     loading.value = false
   }
+}
+
+function handleSessionDeleted() {
+  router.push('/')
+}
+
+async function handleItemUpdated() {
+  await loadSession()
 }
 </script>
 
@@ -53,6 +73,10 @@ async function handleCheckout() {
             {{ centsToYuan(session.total_cents) }}
           </div>
         </div>
+
+        <n-button quaternary block size="small" @click="showDetail = true">
+          查看详情
+        </n-button>
 
         <div>
           <div class="font-bold mb-3">支付方式</div>
@@ -84,5 +108,13 @@ async function handleCheckout() {
         </div>
       </div>
     </n-card>
+
+    <OrderDetailModal
+      v-model:show="showDetail"
+      :session-id="sessionId"
+      :table-no="''"
+      @session-deleted="handleSessionDeleted"
+      @item-updated="handleItemUpdated"
+    />
   </div>
 </template>

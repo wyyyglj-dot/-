@@ -25,6 +25,7 @@ onMounted(() => {
   sseClient.connect()
   sseClient.on('table.updated', () => tableStore.fetchTables())
   sseClient.on('checkout.completed', () => tableStore.fetchTables())
+  sseClient.on('session.deleted', () => tableStore.fetchTables())
 })
 
 function handleCheckout(sessionId: number) {
@@ -89,6 +90,7 @@ async function confirmCheckout() {
         @click="router.push(`/m/order/${table.id}`)"
         @checkout="handleCheckout"
         @cancel="handleCancel"
+        @refresh="tableStore.fetchTables()"
       />
     </div>
     <MobileNav />

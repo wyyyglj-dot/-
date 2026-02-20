@@ -39,4 +39,14 @@ sessionsRouter.delete('/sessions/:sessionId', (req: Request, res: Response, next
   }
 })
 
+sessionsRouter.delete('/sessions/:sessionId/force', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const sessionId = requirePositiveInt(req.params.sessionId, 'sessionId')
+    service.forceDeleteSession(sessionId)
+    res.json(success(null, getRequestId(req)))
+  } catch (err) {
+    next(err)
+  }
+})
+
 export { sessionsRouter }

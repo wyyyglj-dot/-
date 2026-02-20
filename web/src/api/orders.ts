@@ -1,4 +1,4 @@
-import { get, post, patch } from './client'
+import { get, post, patch, del } from './client'
 import type { SessionDetail } from '../types'
 
 export const getSession = (sessionId: number) => get<SessionDetail>(`/sessions/${sessionId}`)
@@ -17,3 +17,6 @@ export const createTicket = (sessionId: number, items: TicketItemInput[], note?:
 
 export const updateTicketItem = (itemId: number, data: { qty_ordered?: number; qty_voided?: number }) =>
   patch<void>(`/ticket-items/${itemId}`, data)
+
+export const forceDeleteSession = (sessionId: number) =>
+  del<void>(`/sessions/${sessionId}/force`)

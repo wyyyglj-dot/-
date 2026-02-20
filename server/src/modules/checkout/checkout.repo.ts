@@ -133,6 +133,9 @@ export function finalizeCheckout(input: {
     if (session.status === 'CLOSED') {
       throw new ConflictError('Session is already closed', 'SESSION_CLOSED')
     }
+    if (session.status !== 'PENDING_CHECKOUT') {
+      throw new ConflictError('Session must be in PENDING_CHECKOUT status', 'SESSION_NOT_PENDING_CHECKOUT')
+    }
 
     const amountRow = calculateAmountStmt.get(txInput.sessionId) as { amount_cents: number } | undefined
     const amountCents = amountRow?.amount_cents ?? 0
