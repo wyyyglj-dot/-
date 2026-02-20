@@ -1,0 +1,12 @@
+**/node_modules/
+dist/
+web-dist/
+release/
+*.db
+data/
+.env
+*.tsbuildinfo
+.claude/tmp/
+.claude/settings.local.json
+patch.diff
+review_report.txt

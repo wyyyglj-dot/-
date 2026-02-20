@@ -1,0 +1,25 @@
+{
+  "name": "diancan",
+  "version": "1.0.0",
+  "private": true,
+  "main": "electron/dist/main.js",
+  "scripts": {
+    "dev:server": "cd server && npm run dev",
+    "dev:web": "cd web && npm run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:web\"",
+    "build:server": "cd server && npm run build",
+    "build:web": "cd web && npm run build && cd .. && node -e \"const fs=require('fs');fs.rmSync('web-dist',{recursive:true,force:true});fs.cpSync('web/dist','web-dist',{recursive:true})\"",
+    "build:electron": "tsc -p tsconfig.electron.json",
+    "rebuild:native": "node -e \"const v=require('electron/package.json').version;const{execSync}=require('child_process');execSync('npx prebuild-install --runtime electron --target '+v+' --arch x64',{cwd:'server/node_modules/better-sqlite3',stdio:'inherit'})\"",
+    "rebuild:node": "cd server && npm rebuild better-sqlite3",
+    "predist": "npm run build:server && npm run build:web && npm run build:electron && npm run rebuild:native",
+    "dist": "electron-builder --win",
+    "electron:dev": "npm run build:server && npm run build:web && npm run build:electron && npm run rebuild:native && electron ."
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "@electron/rebuild": "^3.7.0"
+  }
+}

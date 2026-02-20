@@ -1,0 +1,2 @@
+ALTER TABLE menu_dish ADD COLUMN discount_rate REAL NOT NULL DEFAULT 1.0;
+ALTER TABLE menu_dish ADD COLUMN is_discount_enabled INTEGER NOT NULL DEFAULT 0;

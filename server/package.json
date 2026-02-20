@@ -1,0 +1,27 @@
+{
+  "name": "diancan-server",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc && node -e \"require('fs').cpSync('src/db/migrations','dist/db/migrations',{recursive:true})\"",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^2.0.2",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/multer": "^2.0.0",
+    "@types/node": "^22.13.4",
+    "@types/uuid": "^10.0.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.7.3"
+  }
+}

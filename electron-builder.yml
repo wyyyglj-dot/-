@@ -1,0 +1,30 @@
+appId: com.diancan.app
+productName: 点餐系统
+directories:
+  output: release
+  buildResources: assets
+asar: false
+files:
+  - electron/dist/**/*
+  - server/dist/**/*
+  - web-dist/**/*
+  - assets/**/*
+  - package.json
+extraResources:
+  - from: server/node_modules
+    to: app/server/node_modules
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: assets/icon.ico
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: assets/icon.ico
+  uninstallerIcon: assets/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: 点餐系统
+  deleteAppDataOnUninstall: false
