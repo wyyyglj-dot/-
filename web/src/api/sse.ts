@@ -7,7 +7,9 @@ class SSEClient {
 
   connect(): void {
     if (this.source) return
-    this.source = new EventSource('/api/v1/events')
+    const token = localStorage.getItem('auth_token')
+    const url = '/api/v1/events' + (token ? '?token=' + encodeURIComponent(token) : '')
+    this.source = new EventSource(url)
 
     this.source.onmessage = (e) => {
       try {

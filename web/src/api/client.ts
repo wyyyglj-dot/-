@@ -3,14 +3,21 @@ import type { ApiResponse } from '../types'
 const BASE = '/api/v1'
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = localStorage.getItem('auth_token')
+  if (token) headers['Authorization'] = `Bearer ${token}`
+
   let res: Response
   try {
-    res = await fetch(`${BASE}${path}`, {
-      headers: { 'Content-Type': 'application/json' },
-      ...options,
-    })
+    res = await fetch(`${BASE}${path}`, { headers, ...options })
   } catch (e) {
     throw new Error(`网络请求失败: ${path}`)
+  }
+
+  if (res.status === 401) {
+    localStorage.removeItem('auth_token')
+    window.location.href = '/login'
+    throw new Error('认证已过期，请重新登录')
   }
 
   let json: ApiResponse<T>

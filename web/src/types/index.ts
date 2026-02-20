@@ -202,3 +202,27 @@ export interface RestoreResult {
   restored_tickets: number
   restored_items: number
 }
+
+export interface AuthStateResponse {
+  setupRequired: boolean
+  securityQuestion?: string
+}
+
+export interface AuthTokenResponse {
+  token: string
+}
+
+export interface AuthSetupRequest {
+  pin: string
+  question: string
+  answer: string
+}
+
+export interface AuthLoginRequest {
+  pin: string
+}
+
+export interface AuthRecoverRequest {
+  answer: string
+  newPin: string
+}

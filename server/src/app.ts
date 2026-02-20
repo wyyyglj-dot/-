@@ -15,6 +15,8 @@ import { statsRouter } from './modules/stats/stats.router'
 import { historyRouter } from './modules/history/history.router'
 import { sseRouter } from './modules/sse/sse.router'
 import { systemRouter } from './modules/system/system.router'
+import { authRouter } from './modules/auth/auth.router'
+import { authMiddleware } from './shared/auth-middleware'
 
 const app = express()
 
@@ -22,6 +24,9 @@ app.use(cors({ origin: CORS_ORIGIN }))
 app.use(express.json())
 app.use(requestId)
 app.use(maintenanceMiddleware)
+
+app.use('/api/v1', authRouter)
+app.use('/api/v1', authMiddleware)
 
 app.use('/api/v1', menuRouter)
 app.use('/api/v1', tablesRouter)
