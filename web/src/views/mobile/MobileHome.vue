@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { NModal, useMessage } from 'naive-ui'
+import { NModal, useMessage, useDialog } from 'naive-ui'
 import { useTableStore } from '../../stores/tables'
 import TableCard from '../../components/business/TableCard.vue'
 import MobileNav from '../../components/layout/MobileNav.vue'
@@ -14,6 +14,7 @@ import { v4 as uuidv4 } from 'uuid'
 const tableStore = useTableStore()
 const router = useRouter()
 const message = useMessage()
+const dialog = useDialog()
 
 const showCheckoutConfirm = ref(false)
 const checkoutTarget = ref<{ sessionId: number; tableNo: string; totalCents: number } | null>(null)
@@ -34,6 +35,21 @@ function handleCheckout(sessionId: number) {
     totalCents: table?.total_cents ?? 0,
   }
   showCheckoutConfirm.value = true
+}
+
+async function handleCancel(sessionId: number) {
+  dialog.warning({
+    title: '确认取消',
+    content: '确定要取消当前点餐吗？',
+    positiveText: '取消点餐',
+    negativeText: '返回',
+    onPositiveClick: async () => {
+      try {
+        await tableStore.cancelSession(sessionId)
+        message.success('已取消点餐')
+      } catch (e: any) { message.error(e.message) }
+    },
+  })
 }
 
 async function confirmCheckout() {
@@ -72,6 +88,7 @@ async function confirmCheckout() {
         :table="table"
         @click="router.push(`/m/order/${table.id}`)"
         @checkout="handleCheckout"
+        @cancel="handleCancel"
       />
     </div>
     <MobileNav />
