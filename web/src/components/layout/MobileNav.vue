@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import { sseClient } from '../../api/sse'
 const route = useRoute()
 
 const tabs = [
@@ -21,5 +22,9 @@ const tabs = [
       <span class="text-xl">{{ tab.icon }}</span>
       <span class="text-[10px] mt-0.5">{{ tab.label }}</span>
     </router-link>
+    <span
+      class="w-2 h-2 rounded-full inline-block absolute bottom-2 right-2"
+      :class="sseClient.status.value === 'connected' ? 'bg-green-500' : 'bg-red-500 animate-pulse'"
+    />
   </nav>
 </template>

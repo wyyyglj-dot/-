@@ -12,6 +12,7 @@ import QuantityStepper from '../../components/common/QuantityStepper.vue'
 import PriceDisplay from '../../components/common/PriceDisplay.vue'
 import ThemeToggle from '../../components/common/ThemeToggle.vue'
 import { useStickySpice } from '../../composables/useStickySpice'
+import { useActionLock } from '../../composables/useActionLock'
 import { yuanToCents } from '../../utils/currency'
 import { SPICE_LABELS, SPICE_COLORS, type Dish, type SpiceLevel } from '../../types'
 
@@ -22,6 +23,7 @@ const menuStore = useMenuStore()
 const cartStore = useCartStore()
 const tableStore = useTableStore()
 const { setSticky } = useStickySpice()
+const { locked: submitLocked, execute: executeSubmit } = useActionLock()
 
 const tableId = Number(route.params.tableId)
 const activeCategory = ref<number | 'all'>('all')
@@ -77,13 +79,15 @@ const filteredDishes = computed(() => {
 })
 
 async function handleSubmit() {
-  try {
-    await cartStore.submitOrder()
-    message.success('下单成功')
-    router.push('/m')
-  } catch (e: any) {
-    message.error(e.message)
-  }
+  await executeSubmit(async () => {
+    try {
+      await cartStore.submitOrder()
+      message.success('下单成功')
+      router.push('/m')
+    } catch (e: any) {
+      message.error(e.message)
+    }
+  })
 }
 
 function isSkipQueue(dishId: number | null) {
@@ -158,7 +162,7 @@ function getDishCount(dishId: number) {
         <n-button
           type="primary" size="large"
           class="px-8 font-bold rounded-full"
-          :disabled="cartStore.items.length === 0 || loading"
+          :disabled="cartStore.items.length === 0 || loading || submitLocked"
           @click="handleSubmit"
         >下单并起菜</n-button>
       </div>

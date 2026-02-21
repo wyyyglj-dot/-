@@ -4,6 +4,7 @@ import { RouterLink, useRoute } from 'vue-router'
 import { NMenu } from 'naive-ui'
 import ThemeToggle from '../common/ThemeToggle.vue'
 import MobileConnect from '../common/MobileConnect.vue'
+import { sseClient } from '../../api/sse'
 
 const route = useRoute()
 
@@ -29,7 +30,13 @@ const menuOptions = [
         <ThemeToggle />
         <MobileConnect />
       </div>
-      <div class="text-[10px] text-[var(--text-muted)] text-center">v1.0.0</div>
+      <div class="text-[10px] text-[var(--text-muted)] text-center flex items-center justify-center gap-1">
+        <span
+          class="w-2 h-2 rounded-full inline-block"
+          :class="sseClient.status.value === 'connected' ? 'bg-green-500' : 'bg-red-500 animate-pulse'"
+        />
+        v1.0.0
+      </div>
     </div>
   </div>
 </template>

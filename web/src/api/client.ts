@@ -1,6 +1,9 @@
 import type { ApiResponse } from '../types'
+import { createDiscreteApi } from 'naive-ui'
 
 const BASE = '/api/v1'
+const { message } = createDiscreteApi(['message'])
+let _redirecting = false
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -15,8 +18,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   if (res.status === 401) {
-    localStorage.removeItem('auth_token')
-    window.location.href = '/login'
+    if (!_redirecting) {
+      _redirecting = true
+      localStorage.removeItem('auth_token')
+      message.warning('登录已过期')
+      setTimeout(async () => {
+        const { default: router } = await import('../router')
+        router.push('/login')
+        _redirecting = false
+      }, 1500)
+    }
     throw new Error('认证已过期，请重新登录')
   }
 
@@ -28,7 +39,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   }
 
   if (!json.ok) {
-    throw new Error(json.error?.message || `请求失败 (${res.status})`)
+    const err = new Error(json.error?.message || `请求失败 (${res.status})`)
+    ;(err as any).code = json.error?.code
+    throw err
   }
   return json.data as T
 }

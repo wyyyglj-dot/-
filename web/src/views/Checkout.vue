@@ -6,6 +6,7 @@ import { getSession } from '../api/orders'
 import { checkoutSession } from '../api/checkout'
 import { centsToYuan } from '../utils/currency'
 import { v4 as uuidv4 } from 'uuid'
+import { useActionLock } from '../composables/useActionLock'
 import type { SessionDetail, PaymentMethod } from '../types'
 import OrderDetailModal from '../components/business/OrderDetailModal.vue'
 
@@ -14,8 +15,8 @@ const router = useRouter()
 const message = useMessage()
 const session = ref<SessionDetail | null>(null)
 const paymentMethod = ref<PaymentMethod>('WECHAT')
-const loading = ref(false)
 const showDetail = ref(false)
+const { locked, execute } = useActionLock()
 
 const sessionId = Number(route.params.sessionId)
 
@@ -32,26 +33,25 @@ const paymentStyles: Record<string, string> = {
 }
 
 async function handleCheckout() {
-  if (!session.value || loading.value) return
-  loading.value = true
-  try {
-    await checkoutSession(session.value.id, {
-      method: paymentMethod.value,
-      idempotency_key: uuidv4(),
-    })
-    message.success('结账成功')
-    router.push('/')
-  } catch (e: any) {
-    const msg = e.message || ''
-    if (msg.includes('PENDING_CHECKOUT') || msg.includes('已被修改')) {
-      message.warning('订单已被修改，请重新确认')
-      await loadSession()
-    } else {
-      message.error(msg)
+  if (!session.value) return
+  await execute(async () => {
+    try {
+      await checkoutSession(session.value!.id, {
+        method: paymentMethod.value,
+        idempotency_key: uuidv4(),
+      })
+      message.success('结账成功')
+      router.push('/')
+    } catch (e: any) {
+      const msg = e.message || ''
+      if (msg.includes('PENDING_CHECKOUT') || msg.includes('已被修改')) {
+        message.warning('订单已被修改，请重新确认')
+        await loadSession()
+      } else {
+        message.error(msg)
+      }
     }
-  } finally {
-    loading.value = false
-  }
+  })
 }
 
 function handleSessionDeleted() {
@@ -102,7 +102,7 @@ async function handleItemUpdated() {
 
         <div class="flex gap-4">
           <n-button secondary size="large" class="flex-1" @click="router.back()">返回</n-button>
-          <n-button type="primary" size="large" class="flex-1" :loading="loading" @click="handleCheckout">
+          <n-button type="primary" size="large" class="flex-1" :disabled="locked" @click="handleCheckout">
             确认收钱
           </n-button>
         </div>

@@ -1,15 +1,23 @@
+import { ref } from 'vue'
+
 type EventHandler = (data: any) => void
 
 class SSEClient {
   private source: EventSource | null = null
   private handlers = new Map<string, Set<EventHandler>>()
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null
+  status = ref<'connected' | 'reconnecting'>('reconnecting')
 
   connect(): void {
     if (this.source) return
     const token = localStorage.getItem('auth_token')
     const url = '/api/v1/events' + (token ? '?token=' + encodeURIComponent(token) : '')
     this.source = new EventSource(url)
+
+    this.source.onopen = () => {
+      this.status.value = 'connected'
+      this.emit('reconnected', {})
+    }
 
     this.source.onmessage = (e) => {
       try {
@@ -21,7 +29,29 @@ class SSEClient {
     this.source.onerror = () => {
       this.source?.close()
       this.source = null
-      this.reconnectTimer = setTimeout(() => this.connect(), 3000)
+      this.status.value = 'reconnecting'
+
+      // Auth check before reconnect
+      const authToken = localStorage.getItem('auth_token')
+      if (authToken) {
+        fetch('/api/v1/auth/check', {
+          headers: { Authorization: 'Bearer ' + authToken },
+        })
+          .then(r => {
+            if (r.status === 401) {
+              // Token expired: trigger redirect
+              localStorage.removeItem('auth_token')
+              import('../router').then(({ default: router }) => router.push('/login'))
+            } else {
+              this.reconnectTimer = setTimeout(() => this.connect(), 3000)
+            }
+          })
+          .catch(() => {
+            this.reconnectTimer = setTimeout(() => this.connect(), 3000)
+          })
+      } else {
+        this.reconnectTimer = setTimeout(() => this.connect(), 3000)
+      }
     }
   }
 

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, reactive } from 'vue'
 import {
   NLayout, NLayoutSider, NLayoutContent,
   NCard, NButton, NSpin, NAlert, NModal, NTag,
+  NCollapse, NCollapseItem, NForm, NFormItem, NInput,
   useMessage, useDialog,
 } from 'naive-ui'
 import AppSidebar from '../components/layout/AppSidebar.vue'
@@ -11,6 +12,7 @@ import {
   restoreDb, uploadRestore, migrateDb,
   type DbStatus,
 } from '../api/system'
+import { changePin, changeSecurity } from '../api/auth'
 
 const message = useMessage()
 const dialog = useDialog()
@@ -153,6 +155,64 @@ async function handleMigrate() {
 }
 
 onMounted(fetchStatus)
+
+// --- 安全设置 ---
+const WEAK_PINS = ['000000', '111111', '222222', '333333', '444444', '555555', '666666', '777777', '888888', '999999', '123456', '654321', '123123', '112233']
+
+const pinForm = reactive({ current: '', newPin: '', confirm: '' })
+const pinSubmitting = ref(false)
+
+const secForm = reactive({ current: '', question: '', answer: '' })
+const secSubmitting = ref(false)
+
+function validatePin(pin: string): string | null {
+  if (!/^\d{6}$/.test(pin)) return 'PIN码必须为6位数字'
+  if (WEAK_PINS.includes(pin)) return '新PIN码过于简单'
+  return null
+}
+
+async function handleChangePin() {
+  if (!pinForm.current || !pinForm.newPin || !pinForm.confirm) {
+    message.warning('请填写所有字段')
+    return
+  }
+  const err = validatePin(pinForm.newPin)
+  if (err) { message.warning(err); return }
+  if (pinForm.newPin !== pinForm.confirm) {
+    message.warning('两次输入的新PIN码不一致')
+    return
+  }
+  pinSubmitting.value = true
+  try {
+    await changePin({ current_pin: pinForm.current, new_pin: pinForm.newPin })
+    message.success('PIN码修改成功')
+    pinForm.current = ''; pinForm.newPin = ''; pinForm.confirm = ''
+  } catch (e: any) {
+    if (e.code === 'INVALID_PIN') message.error('当前PIN码错误')
+    else if (e.code === 'WEAK_PIN') message.error('新PIN码过于简单')
+    else message.error(e.message || '修改失败')
+  } finally {
+    pinSubmitting.value = false
+  }
+}
+
+async function handleChangeSecurity() {
+  if (!secForm.current || !secForm.question || !secForm.answer) {
+    message.warning('请填写所有字段')
+    return
+  }
+  secSubmitting.value = true
+  try {
+    await changeSecurity({ current_pin: secForm.current, question: secForm.question, answer: secForm.answer })
+    message.success('安全问题修改成功')
+    secForm.current = ''; secForm.question = ''; secForm.answer = ''
+  } catch (e: any) {
+    if (e.code === 'INVALID_PIN') message.error('当前PIN码错误')
+    else message.error(e.message || '修改失败')
+  } finally {
+    secSubmitting.value = false
+  }
+}
 </script>
 
 <template>
@@ -166,6 +226,39 @@ onMounted(fetchStatus)
 
         <n-spin :show="loading" :description="loadingText">
           <div class="space-y-6">
+            <!-- 安全设置 -->
+            <n-card title="安全设置" size="small">
+              <n-collapse>
+                <n-collapse-item title="修改 PIN 码" name="pin">
+                  <n-form label-placement="top" :show-feedback="false">
+                    <n-form-item label="当前 PIN">
+                      <n-input v-model:value="pinForm.current" type="password" maxlength="6" placeholder="输入当前6位PIN码" :input-props="{ inputmode: 'numeric', pattern: '[0-9]*' }" />
+                    </n-form-item>
+                    <n-form-item label="新 PIN">
+                      <n-input v-model:value="pinForm.newPin" type="password" maxlength="6" placeholder="输入新的6位PIN码" :input-props="{ inputmode: 'numeric', pattern: '[0-9]*' }" />
+                    </n-form-item>
+                    <n-form-item label="确认新 PIN">
+                      <n-input v-model:value="pinForm.confirm" type="password" maxlength="6" placeholder="再次输入新PIN码" :input-props="{ inputmode: 'numeric', pattern: '[0-9]*' }" />
+                    </n-form-item>
+                    <n-button type="primary" block :loading="pinSubmitting" @click="handleChangePin">确认修改</n-button>
+                  </n-form>
+                </n-collapse-item>
+                <n-collapse-item title="修改安全问题" name="security">
+                  <n-form label-placement="top" :show-feedback="false">
+                    <n-form-item label="当前 PIN">
+                      <n-input v-model:value="secForm.current" type="password" maxlength="6" placeholder="输入当前6位PIN码" :input-props="{ inputmode: 'numeric', pattern: '[0-9]*' }" />
+                    </n-form-item>
+                    <n-form-item label="新安全问题">
+                      <n-input v-model:value="secForm.question" placeholder="输入新的安全问题" />
+                    </n-form-item>
+                    <n-form-item label="新安全答案">
+                      <n-input v-model:value="secForm.answer" type="password" placeholder="输入新的安全答案" show-password-on="click" />
+                    </n-form-item>
+                    <n-button type="primary" block :loading="secSubmitting" @click="handleChangeSecurity">确认修改</n-button>
+                  </n-form>
+                </n-collapse-item>
+              </n-collapse>
+            </n-card>
             <!-- 存储位置 -->
             <n-card title="数据存储" size="small">
               <template #header-extra>

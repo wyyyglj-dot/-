@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, nextTick } from 'vue'
+import { onMounted, onUnmounted, ref, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { NLayout, NLayoutSider, NLayoutContent, NGrid, NGridItem, NSpin, NButton, NModal, NInput, useMessage, useDialog } from 'naive-ui'
 import { useTableStore } from '../stores/tables'
@@ -27,11 +27,20 @@ const renameTarget = ref<{ id: number; table_no: string } | null>(null)
 const renameInput = ref('')
 const renameInputRef = ref<InstanceType<typeof NInput> | null>(null)
 
+let unsubs: (() => void)[] = []
+
 onMounted(async () => {
   await tableStore.fetchTables()
   loading.value = false
   sseClient.connect()
-  sseClient.on('table.updated', (data: any) => tableStore.updateTableLocally(data.table))
+  unsubs.push(
+    sseClient.on('table.updated', (data: any) => tableStore.updateTableLocally(data.table)),
+    sseClient.on('reconnected', () => tableStore.fetchTables()),
+  )
+})
+
+onUnmounted(() => {
+  unsubs.forEach(fn => fn())
 })
 
 function handleTableClick(table: any) {

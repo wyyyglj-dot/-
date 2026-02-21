@@ -19,6 +19,7 @@ onMounted(() => {
     }),
     sseClient.on('ticket.created', () => orderStore.debouncedRefetch()),
     sseClient.on('session.deleted', (data: any) => orderStore.removeBySessionId(data.session_id)),
+    sseClient.on('reconnected', () => orderStore.fetchServingQueue()),
   )
 })
 

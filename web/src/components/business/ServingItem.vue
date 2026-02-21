@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { NButton } from 'naive-ui'
+import { useOrderStore } from '../../stores/orders'
+import { useActionLock } from '../../composables/useActionLock'
 import type { ServingQueueItem, ServedItem } from '../../types'
 import { SPICE_LABELS } from '../../types'
 
@@ -11,10 +13,9 @@ const props = withDefaults(defineProps<{
   mode: 'serving',
 })
 
-defineEmits<{
-  serve: [itemId: number, qty: number]
-  unserve: [itemId: number, qty: number]
-}>()
+const orderStore = useOrderStore()
+const { locked: serveLocked, execute: executeServe } = useActionLock()
+const { locked: unserveLocked, execute: executeUnserve } = useActionLock()
 
 const displayQty = computed(() =>
   props.mode === 'serving'
@@ -37,6 +38,20 @@ function elapsed(dateStr: string): string {
   const m = Math.floor((totalSec % 3600) / 60)
   const s = totalSec % 60
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+function handleServe() {
+  executeServe(async () => {
+    await orderStore.markServed(props.item.item_id, displayQty.value)
+    orderStore.fetchServedItems()
+  }).catch(() => { /* errors handled in store via snapshot rollback */ })
+}
+
+function handleUnserve() {
+  executeUnserve(async () => {
+    await orderStore.unserveItem(props.item.item_id, displayQty.value)
+    orderStore.fetchServingQueue()
+  }).catch(() => { /* errors handled in store */ })
 }
 </script>
 
@@ -62,7 +77,8 @@ function elapsed(dateStr: string): string {
       type="primary"
       size="large"
       class="px-6 font-bold"
-      @click="$emit('serve', item.item_id, displayQty)"
+      :disabled="serveLocked"
+      @click="handleServe"
     >
       已上菜
     </n-button>
@@ -72,7 +88,8 @@ function elapsed(dateStr: string): string {
       ghost
       size="medium"
       class="px-4 font-bold"
-      @click="$emit('unserve', item.item_id, displayQty)"
+      :disabled="unserveLocked"
+      @click="handleUnserve"
     >
       恢复
     </n-button>

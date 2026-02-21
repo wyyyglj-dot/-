@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { NModal, useMessage, useDialog } from 'naive-ui'
 import { useTableStore } from '../../stores/tables'
@@ -20,10 +20,19 @@ const showCheckoutConfirm = ref(false)
 const checkoutTarget = ref<{ sessionId: number; tableNo: string; totalCents: number } | null>(null)
 const checkoutLoading = ref(false)
 
+let unsubs: (() => void)[] = []
+
 onMounted(() => {
   tableStore.fetchTables()
   sseClient.connect()
-  sseClient.on('table.updated', (data: any) => tableStore.updateTableLocally(data.table))
+  unsubs.push(
+    sseClient.on('table.updated', (data: any) => tableStore.updateTableLocally(data.table)),
+    sseClient.on('reconnected', () => tableStore.fetchTables()),
+  )
+})
+
+onUnmounted(() => {
+  unsubs.forEach(fn => fn())
 })
 
 function handleCheckout(sessionId: number) {

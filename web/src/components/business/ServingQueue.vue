@@ -16,16 +16,6 @@ function switchTab(tab: 'waiting' | 'served') {
   }
 }
 
-async function handleServe(id: number, qty: number) {
-  await orderStore.markServed(id, qty)
-  orderStore.fetchServedItems()
-}
-
-async function handleUnserve(id: number, qty: number) {
-  await orderStore.unserveItem(id, qty)
-  orderStore.fetchServingQueue()
-}
-
 const isLoading = computed(() =>
   activeTab.value === 'waiting' ? orderStore.servingLoading : orderStore.servedLoading
 )
@@ -78,7 +68,6 @@ const errorMsg = computed(() =>
         :key="item.item_id"
         :item="item"
         mode="serving"
-        @serve="handleServe"
       />
     </template>
 
@@ -91,7 +80,6 @@ const errorMsg = computed(() =>
         :key="item.item_id"
         :item="item"
         mode="served"
-        @unserve="handleUnserve"
       />
     </template>
   </div>

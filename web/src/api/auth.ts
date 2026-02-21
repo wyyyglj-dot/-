@@ -24,3 +24,11 @@ export function checkAuth(): Promise<void> {
 export function logout(): Promise<void> {
   return post<void>('/auth/logout', {})
 }
+
+export function changePin(data: { current_pin: string; new_pin: string }): Promise<void> {
+  return post<void>('/auth/change-pin', data)
+}
+
+export function changeSecurity(data: { current_pin: string; question: string; answer: string }): Promise<void> {
+  return post<void>('/auth/change-security', data)
+}
