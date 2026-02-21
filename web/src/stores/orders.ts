@@ -1,7 +1,13 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { createDiscreteApi } from 'naive-ui'
 import type { ServingQueueItem, ServedItem } from '../types'
 import * as api from '../api/serving'
+
+const { message } = createDiscreteApi(['message'])
+
+let _localOpTimestamp = 0
+let _debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 export const useOrderStore = defineStore('orders', () => {
   const servingQueue = ref<ServingQueueItem[]>([])
@@ -39,11 +45,14 @@ export const useOrderStore = defineStore('orders', () => {
   }
 
   async function markServed(itemId: number, qty?: number) {
+    const snapshot = [...servingQueue.value]
+    servingQueue.value = servingQueue.value.filter(i => i.item_id !== itemId)
+    _localOpTimestamp = Date.now()
     try {
       await api.markServed(itemId, qty)
-      servingQueue.value = servingQueue.value.filter(i => i.item_id !== itemId)
     } catch (e: any) {
-      console.error('[orders] markServed failed:', e)
+      servingQueue.value = snapshot
+      message.error('上菜失败，已恢复')
       throw e
     }
   }
@@ -58,8 +67,38 @@ export const useOrderStore = defineStore('orders', () => {
     }
   }
 
+  function isLocalOpDebouncing(): boolean {
+    return Date.now() - _localOpTimestamp < 2000
+  }
+
+  function handleServingUpdated(data: { item_id: number; served_delta: number; pending_qty: number }) {
+    if (data.served_delta > 0) {
+      const idx = servingQueue.value.findIndex(i => i.item_id === data.item_id)
+      if (idx >= 0) {
+        if (data.pending_qty <= 0) {
+          servingQueue.value.splice(idx, 1)
+        } else {
+          servingQueue.value[idx] = { ...servingQueue.value[idx], quantity: data.pending_qty }
+        }
+      }
+    } else if (data.served_delta < 0) {
+      const idx = servingQueue.value.findIndex(i => i.item_id === data.item_id)
+      if (idx < 0) debouncedRefetch()
+    }
+  }
+
+  function removeBySessionId(sessionId: number) {
+    servingQueue.value = servingQueue.value.filter(i => i.session_id !== sessionId)
+  }
+
+  function debouncedRefetch() {
+    if (_debounceTimer) clearTimeout(_debounceTimer)
+    _debounceTimer = setTimeout(() => fetchServingQueue(), 500)
+  }
+
   return {
     servingQueue, servingLoading, servingError, fetchServingQueue, markServed,
     servedItems, servedLoading, servedError, fetchServedItems, unserveItem,
+    isLocalOpDebouncing, handleServingUpdated, removeBySessionId, debouncedRefetch,
   }
 })

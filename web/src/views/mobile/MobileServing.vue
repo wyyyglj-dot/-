@@ -13,9 +13,12 @@ onMounted(() => {
   orderStore.fetchServingQueue()
   sseClient.connect()
   unsubs.push(
-    sseClient.on('serving.updated', () => orderStore.fetchServingQueue()),
-    sseClient.on('ticket.created', () => orderStore.fetchServingQueue()),
-    sseClient.on('session.deleted', () => orderStore.fetchServingQueue()),
+    sseClient.on('serving.updated', (data: any) => {
+      if (orderStore.isLocalOpDebouncing()) return
+      orderStore.handleServingUpdated(data)
+    }),
+    sseClient.on('ticket.created', () => orderStore.debouncedRefetch()),
+    sseClient.on('session.deleted', (data: any) => orderStore.removeBySessionId(data.session_id)),
   )
 })
 

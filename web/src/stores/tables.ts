@@ -26,7 +26,11 @@ export const useTableStore = defineStore('tables', () => {
 
   function updateTableLocally(updated: TableSummary) {
     const idx = tables.value.findIndex(t => t.id === updated.id)
-    if (idx >= 0) tables.value[idx] = updated
+    if (idx >= 0) {
+      tables.value[idx] = updated
+    } else {
+      tables.value.push(updated)
+    }
   }
 
   async function addTable(tableNo: string, sortOrder?: number) {

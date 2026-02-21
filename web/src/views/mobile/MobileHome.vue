@@ -23,9 +23,7 @@ const checkoutLoading = ref(false)
 onMounted(() => {
   tableStore.fetchTables()
   sseClient.connect()
-  sseClient.on('table.updated', () => tableStore.fetchTables())
-  sseClient.on('checkout.completed', () => tableStore.fetchTables())
-  sseClient.on('session.deleted', () => tableStore.fetchTables())
+  sseClient.on('table.updated', (data: any) => tableStore.updateTableLocally(data.table))
 })
 
 function handleCheckout(sessionId: number) {

@@ -31,10 +31,7 @@ onMounted(async () => {
   await tableStore.fetchTables()
   loading.value = false
   sseClient.connect()
-  sseClient.on('table.updated', () => tableStore.fetchTables())
-  sseClient.on('checkout.completed', () => tableStore.fetchTables())
-  sseClient.on('session.opened', () => tableStore.fetchTables())
-  sseClient.on('session.deleted', () => tableStore.fetchTables())
+  sseClient.on('table.updated', (data: any) => tableStore.updateTableLocally(data.table))
 })
 
 function handleTableClick(table: any) {
