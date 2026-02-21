@@ -6,6 +6,7 @@ const route = useRoute()
 const tabs = [
   { path: '/m', label: '餐桌', icon: '🍽' },
   { path: '/m/serving', label: '上菜', icon: '📋' },
+  { path: '/m/history', label: '历史', icon: '🕒' },
   { path: '/m/stats', label: '统计', icon: '📊' },
 ]
 </script>

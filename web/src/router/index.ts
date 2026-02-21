@@ -89,6 +89,11 @@ const router = createRouter({
       meta: { title: '上菜顺序', mobile: true },
     },
     {
+      path: '/m/history',
+      component: () => import('../views/mobile/MobileHistory.vue'),
+      meta: { title: '历史记录', mobile: true },
+    },
+    {
       path: '/m/stats',
       component: () => import('../views/mobile/MobileStats.vue'),
       meta: { title: '营业统计', mobile: true },
