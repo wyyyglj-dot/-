@@ -77,17 +77,23 @@ export function listClosedSessions(filters: ClosedSessionFilters): {
   const where: string[] = [`s.status = 'CLOSED'`]
   const params: unknown[] = []
 
+  // 业务时区 UTC+8 (Asia/Shanghai)，中国无夏令时
+  const TZ_OFFSET_H = 8
+
   if (filters.from) {
+    // 本地日期起点 → UTC：减去时区偏移
+    const fromUtc = new Date(filters.from + 'T00:00:00Z')
+    fromUtc.setUTCHours(fromUtc.getUTCHours() - TZ_OFFSET_H)
     where.push('s.closed_at >= ?')
-    params.push(filters.from)
+    params.push(fromUtc.toISOString().slice(0, 19).replace('T', ' '))
   }
   if (filters.to) {
-    // next day boundary for inclusive date range
-    const d = new Date(filters.to + 'T00:00:00Z')
-    d.setUTCDate(d.getUTCDate() + 1)
-    const nextDay = d.toISOString().slice(0, 10)
+    // 本地日期终点（次日零点）→ UTC：减去时区偏移
+    const toUtc = new Date(filters.to + 'T00:00:00Z')
+    toUtc.setUTCDate(toUtc.getUTCDate() + 1)
+    toUtc.setUTCHours(toUtc.getUTCHours() - TZ_OFFSET_H)
     where.push('s.closed_at < ?')
-    params.push(nextDay)
+    params.push(toUtc.toISOString().slice(0, 19).replace('T', ' '))
   }
   if (filters.tableNo) {
     where.push('t.table_no LIKE ?')

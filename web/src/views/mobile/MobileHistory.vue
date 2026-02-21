@@ -5,6 +5,7 @@ import { useMessage, useDialog } from 'naive-ui'
 import * as historyApi from '../../api/history'
 import { sseClient } from '../../api/sse'
 import { centsToYuan } from '../../utils/currency'
+import { formatLocalDateTime, formatLocalTime } from '../../utils/datetime'
 import { useActionLock } from '../../composables/useActionLock'
 import MobileNav from '../../components/layout/MobileNav.vue'
 import ThemeToggle from '../../components/common/ThemeToggle.vue'
@@ -214,21 +215,9 @@ onUnmounted(() => {
   if (clearTimer) { clearTimeout(clearTimer); clearTimer = null }
 })
 
-// Helpers for detail view
-function formatTime(iso: string) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-}
-
-function formatFullTime(iso: string) {
-  if (!iso) return ''
-  return new Date(iso).toLocaleString([], { 
-    month: 'numeric', 
-    day: 'numeric', 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  })
-}
+// Helpers for detail view — 使用统一 UTC 解析工具
+const formatTime = formatLocalTime
+const formatFullTime = formatLocalDateTime
 </script>
 
 <template>

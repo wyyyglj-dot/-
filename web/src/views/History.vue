@@ -7,6 +7,7 @@ import {
 import { useRouter } from 'vue-router'
 import AppSidebar from '../components/layout/AppSidebar.vue'
 import { centsToYuan } from '../utils/currency'
+import { formatLocalFull } from '../utils/datetime'
 import * as historyApi from '../api/history'
 import type { ClosedSessionListItem, ClosedSessionDetail, OrderTicketItem } from '../types'
 
@@ -50,8 +51,8 @@ const paymentMap: Record<string, string> = { CASH: '现金', WECHAT: '微信', A
 
 const columns = [
   { title: '桌号', key: 'table_no', width: 100, render: (row: ClosedSessionListItem) => `${row.table_no}号桌` },
-  { title: '开台时间', key: 'opened_at', width: 170 },
-  { title: '结账时间', key: 'closed_at', width: 170 },
+  { title: '开台时间', key: 'opened_at', width: 170, render: (row: ClosedSessionListItem) => formatLocalFull(row.opened_at) },
+  { title: '结账时间', key: 'closed_at', width: 170, render: (row: ClosedSessionListItem) => formatLocalFull(row.closed_at) },
   { title: '消费金额', key: 'amount_cents', width: 120, render: (row: ClosedSessionListItem) => centsToYuan(row.amount_cents) },
   {
     title: '支付方式', key: 'payment_method', width: 100,
@@ -159,8 +160,8 @@ async function handleRestore(sessionId: number) {
             <n-descriptions bordered :column="2" size="small" class="mb-4">
               <n-descriptions-item label="桌号">{{ drawerDetail.session.table_no }}号桌</n-descriptions-item>
               <n-descriptions-item label="状态">已结账</n-descriptions-item>
-              <n-descriptions-item label="开台">{{ drawerDetail.session.opened_at }}</n-descriptions-item>
-              <n-descriptions-item label="结账">{{ drawerDetail.session.closed_at }}</n-descriptions-item>
+              <n-descriptions-item label="开台">{{ formatLocalFull(drawerDetail.session.opened_at) }}</n-descriptions-item>
+              <n-descriptions-item label="结账">{{ formatLocalFull(drawerDetail.session.closed_at ?? '') }}</n-descriptions-item>
               <n-descriptions-item label="总金额">{{ centsToYuan(drawerDetail.total_cents) }}</n-descriptions-item>
               <n-descriptions-item label="支付">
                 {{ drawerDetail.payment ? (paymentMap[drawerDetail.payment.method] || drawerDetail.payment.method) : '-' }}
