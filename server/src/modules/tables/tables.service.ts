@@ -40,7 +40,7 @@ export function createTable(input: unknown) {
   const isEnabled = body.is_enabled === undefined ? 1 : parseEnabled(body.is_enabled, 'is_enabled')
 
   const created = repo.createTable(tableNo, sortOrder, isEnabled)
-  sseHub.broadcast('table.updated', { table: created })
+  sseHub.broadcast('table.updated', { table: repo.getTableSummary(created.id) })
   return created
 }
 
@@ -61,6 +61,6 @@ export function updateTable(tableId: number, input: unknown) {
   }
 
   const updated = repo.updateTable(tableId, patch)
-  sseHub.broadcast('table.updated', { table: updated })
+  sseHub.broadcast('table.updated', { table: repo.getTableSummary(updated.id) })
   return updated
 }

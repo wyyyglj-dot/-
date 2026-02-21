@@ -93,7 +93,7 @@ function getTableByIdInternal(id: number): DiningTable | null {
 
 function loadSummaryBase(tableId?: number): SummaryBaseRow[] {
   const db = getDb()
-  const whereClause = tableId === undefined ? 'WHERE t.is_enabled = 1' : 'WHERE t.id = ? AND t.is_enabled = 1'
+  const whereClause = tableId === undefined ? 'WHERE t.is_enabled = 1' : 'WHERE t.id = ?'
   const params = tableId === undefined ? [] : [tableId]
 
   return db.prepare(`

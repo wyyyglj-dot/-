@@ -84,3 +84,15 @@ export function cleanupExpiredSessions(): number {
   `).run()
   return result.changes
 }
+
+export function updatePinHash(hash: string, salt: string): void {
+  getDb().prepare(`
+    UPDATE admin_pin SET pin_hash = ?, pin_salt = ?, updated_at = datetime('now') WHERE id = 1
+  `).run(hash, salt)
+}
+
+export function updateSecurityQuestion(question: string, answerHash: string, answerSalt: string): void {
+  getDb().prepare(`
+    UPDATE admin_pin SET security_question = ?, security_answer_hash = ?, security_answer_salt = ?, updated_at = datetime('now') WHERE id = 1
+  `).run(question, answerHash, answerSalt)
+}

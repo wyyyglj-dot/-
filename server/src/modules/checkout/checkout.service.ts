@@ -2,6 +2,7 @@ import { DomainError, NotFoundError } from '../../shared/errors'
 import { requireString } from '../../shared/validation'
 import { Payment, PaymentMethod } from '../../shared/types'
 import { sseHub } from '../sse/sse.hub'
+import { getTableSummary } from '../tables/tables.repo'
 import * as repo from './checkout.repo'
 
 export interface CheckoutResponse {
@@ -57,9 +58,7 @@ export function checkoutSession(sessionId: number, input: unknown): CheckoutResp
       business_day: result.payment.business_day,
     })
     sseHub.broadcast('table.updated', {
-      table_id: session.table_id,
-      session_id: sessionId,
-      status: 'idle',
+      table: getTableSummary(session.table_id),
     })
   }
 

@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.8.1",
+    "compression": "^1.8.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "multer": "^2.0.2",
@@ -16,6 +17,7 @@
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
+    "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/multer": "^2.0.0",

@@ -1,6 +1,7 @@
 import path from 'path'
 import express from 'express'
 import cors from 'cors'
+import compression from 'compression'
 import { CORS_ORIGIN } from './config/constants'
 import { errorHandler } from './shared/errors'
 import { requestId } from './shared/middleware'
@@ -21,6 +22,14 @@ import { authMiddleware } from './shared/auth-middleware'
 const app = express()
 
 app.use(cors({ origin: CORS_ORIGIN }))
+app.use(compression({
+  threshold: 1024,
+  filter: (req, res) => {
+    if (req.path === '/api/v1/events') return false
+    if (req.headers.accept?.includes('text/event-stream')) return false
+    return compression.filter(req, res)
+  },
+}))
 app.use(express.json())
 app.use(requestId)
 app.use(maintenanceMiddleware)

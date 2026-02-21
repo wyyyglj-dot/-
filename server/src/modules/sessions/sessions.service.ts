@@ -1,6 +1,7 @@
 import { ConflictError, NotFoundError } from '../../shared/errors'
 import { OrderTicket, OrderTicketItem, TableSession } from '../../shared/types'
 import { sseHub } from '../sse/sse.hub'
+import { getTableSummary } from '../tables/tables.repo'
 import * as repo from './sessions.repo'
 
 export interface SessionDetail extends TableSession {
@@ -28,9 +29,7 @@ export function openSession(tableId: number): TableSession {
     opened_at: created.opened_at,
   })
   sseHub.broadcast('table.updated', {
-    table_id: tableId,
-    session_id: created.id,
-    status: 'dining',
+    table: getTableSummary(tableId),
   })
 
   return created
@@ -74,8 +73,7 @@ export function cancelSession(sessionId: number): void {
   if (!deleted) throw new NotFoundError('Session')
 
   sseHub.broadcast('table.updated', {
-    table_id: session.table_id,
-    status: 'idle',
+    table: getTableSummary(session.table_id),
   })
 }
 
@@ -90,7 +88,6 @@ export function forceDeleteSession(sessionId: number): void {
     table_id: session.table_id,
   })
   sseHub.broadcast('table.updated', {
-    table_id: session.table_id,
-    status: 'idle',
+    table: getTableSummary(session.table_id),
   })
 }

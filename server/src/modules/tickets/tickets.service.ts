@@ -9,6 +9,7 @@ import { OrderTicket, OrderTicketItem } from '../../shared/types'
 import { getDb } from '../../db/client'
 import { sseHub } from '../sse/sse.hub'
 import * as sessionsRepo from '../sessions/sessions.repo'
+import { getTableSummary } from '../tables/tables.repo'
 import * as repo from './tickets.repo'
 
 export interface TicketWithItems extends OrderTicket {
@@ -122,9 +123,7 @@ export function createTicket(sessionId: number, input: unknown): TicketWithItems
     item_count: created.items.length,
   })
   sseHub.broadcast('table.updated', {
-    table_id: session.table_id,
-    session_id: session.id,
-    ...(needsRevert ? { status: 'dining' } : {}),
+    table: getTableSummary(session.table_id),
   })
 
   return {
@@ -197,9 +196,7 @@ export function patchTicketItem(itemId: number, input: unknown): OrderTicketItem
     pending_qty: updated.qty_ordered - updated.qty_served - updated.qty_voided,
   })
   sseHub.broadcast('table.updated', {
-    table_id: current.table_id,
-    session_id: current.session_id,
-    ...(needsRevert ? { status: 'dining' } : {}),
+    table: getTableSummary(current.table_id),
   })
 
   return updated

@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction, Router } from 'express'
+import crypto from 'crypto'
+import { DomainError } from '../../shared/errors'
 import { success } from '../../shared/response'
 import { requireString } from '../../shared/validation'
 import * as authService from './auth.service'
@@ -65,6 +67,40 @@ authRouter.post('/auth/logout', (req: Request, res: Response, next: NextFunction
     const authHeader = req.headers.authorization
     const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined
     if (token) authService.logout(token)
+    res.json(success({ ok: true }, getRequestId(req)))
+  } catch (err) { next(err) }
+})
+
+function extractTokenHash(req: Request): string | null {
+  const authHeader = req.headers.authorization
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined
+  if (!token) return null
+  return crypto.createHash('sha256').update(token).digest('hex')
+}
+
+authRouter.post('/auth/change-pin', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tokenHash = extractTokenHash(req)
+    if (!tokenHash || !authService.validateToken(req.headers.authorization!.slice(7))) {
+      throw new DomainError('UNAUTHORIZED', 'Authentication required', 401)
+    }
+    const currentPin = requireString(req.body.current_pin, 'current_pin')
+    const newPin = requireString(req.body.new_pin, 'new_pin')
+    authService.changePin(currentPin, newPin, tokenHash)
+    res.json(success({ ok: true }, getRequestId(req)))
+  } catch (err) { next(err) }
+})
+
+authRouter.post('/auth/change-security', (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const tokenHash = extractTokenHash(req)
+    if (!tokenHash || !authService.validateToken(req.headers.authorization!.slice(7))) {
+      throw new DomainError('UNAUTHORIZED', 'Authentication required', 401)
+    }
+    const currentPin = requireString(req.body.current_pin, 'current_pin')
+    const question = requireString(req.body.question, 'question')
+    const answer = requireString(req.body.answer, 'answer')
+    authService.changeSecurity(currentPin, question, answer)
     res.json(success({ ok: true }, getRequestId(req)))
   } catch (err) { next(err) }
 })

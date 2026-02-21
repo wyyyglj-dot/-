@@ -1,6 +1,7 @@
 import { DomainError } from '../../shared/errors'
 import { optionalString, requirePositiveInt } from '../../shared/validation'
 import { sseHub } from '../sse/sse.hub'
+import { getTableSummary } from '../tables/tables.repo'
 import * as repo from './history.repo'
 
 function firstQueryValue(value: unknown): unknown {
@@ -73,9 +74,7 @@ export function restoreFromHistory(sessionId: number) {
     })
   }
   sseHub.broadcast('table.updated', {
-    table_id: restored.new_session.table_id,
-    session_id: restored.new_session.id,
-    status: restored.new_session.status === 'PENDING_CHECKOUT' ? 'pending_checkout' : 'dining',
+    table: getTableSummary(restored.new_session.table_id),
   })
 
   return restored

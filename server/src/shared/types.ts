@@ -93,3 +93,14 @@ export interface AuthRecoverRequest {
   answer: string
   newPin: string
 }
+
+export interface ChangePinRequest {
+  current_pin: string
+  new_pin: string
+}
+
+export interface ChangeSecurityRequest {
+  current_pin: string
+  question: string
+  answer: string
+}

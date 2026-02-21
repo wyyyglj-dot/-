@@ -1,6 +1,7 @@
 import { ConflictError, DomainError, NotFoundError } from '../../shared/errors'
 import { requirePositiveInt } from '../../shared/validation'
 import { sseHub } from '../sse/sse.hub'
+import { getTableSummary } from '../tables/tables.repo'
 import * as repo from './serving.repo'
 
 function asOptionalObject(value: unknown): Record<string, unknown> {
@@ -59,8 +60,7 @@ export function serveTicketItem(itemId: number, input: unknown) {
   }
 
   sseHub.broadcast('table.updated', {
-    table_id: updated.table_id,
-    session_id: updated.session_id,
+    table: getTableSummary(updated.table_id),
   })
 
   return updated
@@ -109,8 +109,7 @@ export function unserveTicketItem(itemId: number, input: unknown) {
   }
 
   sseHub.broadcast('table.updated', {
-    table_id: finalItem.table_id,
-    session_id: finalItem.session_id,
+    table: getTableSummary(finalItem.table_id),
   })
 
   return finalItem
