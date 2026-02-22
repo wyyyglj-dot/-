@@ -46,6 +46,30 @@ npm run dev
 npm run dist
 ```
 
+### Docker 一键部署
+
+```bash
+# 克隆项目
+git clone https://github.com/wyyyglj-dot/-.git
+cd -
+
+# 启动服务（自动构建镜像）
+docker compose up -d
+
+# 访问系统
+# http://localhost:3000
+```
+
+自定义配置：复制 `.env.example` 为 `.env` 并修改：
+
+```bash
+cp .env.example .env
+# 编辑 .env 设置 CORS_ORIGIN、ADMIN_TOKEN 等
+docker compose up -d
+```
+
+数据持久化在 Docker 命名卷 `diancan-data` 中，重启容器不丢失数据。
+
 ## 项目结构
 
 ```

@@ -1,0 +1,31 @@
+# VCS
+.git/
+
+# Dependencies
+**/node_modules/
+
+# Build artifacts
+**/dist/
+web-dist/
+release/
+
+# Desktop app (not needed for Docker)
+electron/
+
+# Runtime data and SQLite files
+data/
+server/data/
+*.db
+*.db-wal
+*.db-shm
+
+# Local tooling and secrets
+.claude/
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
